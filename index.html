@@ -26,7 +26,7 @@
 	<script type="text/javascript">
 		$( function() {
 			// create scene
-			var scene = new BGem3.Scene();
+			var scene = new BGem3.Scene( { bg:[ 142, 214, 255 ], fogColor: [ 142, 214, 255 ] } );
 
 			var camera = new BGem3.Camera( { pos:[ 0, 0, -200 ], rot:[ 0, 10, 0 ], fl:800, speed:1, fr:0.1 } );
 

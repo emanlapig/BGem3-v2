@@ -1,8 +1,12 @@
 var BGem3 = {};
 
-BGem3.Scene = function() {
+BGem3.Scene = function( options ) {
 	this.objs = [];
 	this.cams = [];
+	this.bg = options.bg || [ 142, 214, 255 ];
+	this.fog = options.fog || true;
+	this.fogColor = options.fogColor || [ 142, 214, 255 ];
+	this.fogDist = 800;
 };
 
 BGem3.Camera = function( options ) {
@@ -235,6 +239,8 @@ BGem3.Renderer = function( scene, options ) {
 		draw: function() { // draw to the canvas
 			var ctx = _renderer.ctx;
 			ctx.clearRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // clear canvas
+			ctx.fillStyle="rgb("+_scene.bg[0]+","+_scene.bg[1]+","+_scene.bg[2]+")";
+			ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight );
 			for ( var i=0; i<_renderer.zSort.length; i++ ) {
 				if ( _renderer.zSort[i][5] ) { // if face is visible
 					_renderer.zSort[i][5] = Maths.backface_cull( _renderer.zSort[i] ); // backface cull
@@ -252,21 +258,37 @@ BGem3.Renderer = function( scene, options ) {
 						ctx.lineTo( pts[3][0], pts[3][1] );
 						ctx.lineTo( pts[0][0], pts[0][1] );
 						ctx.closePath();
-						if ( _renderer.zSort[i][6].shadow ) {
+						var color = _renderer.zSort[i][6].color,
+							r = color[0],
+							g = color[1],
+							b = color[2];
+						if ( _renderer.zSort[i][6].shadow ) { // if shadows are enabled
 							var normal = _renderer.zSort[i][6].normal;
 							var shineWidth = _renderer.zSort[i][6].shineWidth,
 								shineStren = _renderer.zSort[i][6].shineStren,
 								shade = 1 - ( normal/Math.PI ),
-								shine = 1 - ( normal/Math.PI ) * shineWidth,
-								color = _renderer.zSort[i][6].color;
-							var r = Math.floor( color[0]*shade ) + Math.floor( color[0]*shine + shineStren*shine ),
-								g = Math.floor( color[1]*shade ) + Math.floor( color[1]*shine + shineStren*shine ),
-								b = Math.floor( color[2]*shade ) + Math.floor( color[2]*shine + shineStren*shine );
-							ctx.strokeStyle="rgb("+r+","+g+","+b+")";
-							ctx.stroke();
-							ctx.fillStyle="rgb("+r+","+g+","+b+")";
-							ctx.fill();
+								shine = 1 - ( normal/Math.PI ) * shineWidth;
+							r = Math.floor( color[0]*shade ) + Math.floor( color[0]*shine + shineStren*shine ),
+							g = Math.floor( color[1]*shade ) + Math.floor( color[1]*shine + shineStren*shine ),
+							b = Math.floor( color[2]*shade ) + Math.floor( color[2]*shine + shineStren*shine );
+							if ( _scene.fog ) {
+								var dist = -_renderer.zSort[i][4] / 4;
+								var fogRatio = dist / _scene.fogDist;
+								if (fogRatio>1) {
+									fogRatio=1;
+								}
+								var Rdiff = r - _scene.fogColor[0];
+								r = Math.floor( r - (Rdiff*fogRatio) );
+								var Gdiff = g - _scene.fogColor[1];
+								g = Math.floor( g - (Gdiff*fogRatio) );
+								var Bdiff = b - _scene.fogColor[2];
+								b = Math.floor( b - (Bdiff*fogRatio) );
+							}
 						}
+						ctx.strokeStyle="rgb("+r+","+g+","+b+")";
+						ctx.stroke();
+						ctx.fillStyle="rgb("+r+","+g+","+b+")";
+						ctx.fill();
 						if ( _renderer.zSort[i][6].stroke ) {
 							ctx.strokeStyle = "rgb(0,0,0)";
 							ctx.stroke();
@@ -420,10 +442,6 @@ BGem3.Maths = function() {
 		else if ( x2>=x1 && y2<y1 ) { // quad iv
 			angle = 1.5*Math.PI - Math.atan( (x2-x1)/(y2-y1) );
 		}
-		/*if ( angle===undefined ) {
-			console.log(p1+","+p2);
-			stopAnimation();
-		}*/
 		return angle;
 	}
 	this.get_dist = function( p1, p2 ) {
