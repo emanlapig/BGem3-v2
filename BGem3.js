@@ -5,8 +5,9 @@ BGem3.Scene = function( options ) {
 	this.cams = [];
 	this.bg = options.bg || [ 142, 214, 255 ];
 	this.fog = options.fog || true;
-	this.fogColor = options.fogColor || [ 142, 214, 255 ];
-	this.fogDist = 800;
+	this.fogColor = options.fogColor || options.bg || [ 142, 214, 255 ];
+	this.fogDist = 800; // distance at which objects disappear
+	this.clipDist = 50; // buffer distance for clipping objects behind us
 };
 
 BGem3.Camera = function( options ) {
@@ -14,7 +15,7 @@ BGem3.Camera = function( options ) {
 	this.rotation = options.rot || [ 0, 0, 0 ];
 	this.focalLen = options.fl || 800;
 	this.friction = options.fr || 0.2;
-	this.speed = options.speed || 1;
+	this.speed = options.speed || 1; // cam movement velocity
 	this.w = 0;
 	this.a = 0;
 	this.s = 0;
@@ -28,9 +29,6 @@ BGem3.Camera = function( options ) {
 BGem3.Obj3D = function( mesh ) {
 	this.mesh = mesh;
 	this.visible = true;
-	this.stroke = false;
-	this.fill = false;
-	this.textured = false;
 };
 
 BGem3.Mesh = function() {
@@ -40,6 +38,8 @@ BGem3.Mesh = function() {
 	this.vertices2D = [];
 	this.transform = [];
 	this.faces = [];
+	this.fill = false;
+	this.stroke = true;
 };
 
 BGem3.CubeMesh = function( options ) {
@@ -49,8 +49,10 @@ BGem3.CubeMesh = function( options ) {
 	this.position = options.pos || [ 0, 0, 0 ];
 	this.color = options.color || [ 102, 45, 145 ];
 	this.textured = options.textured || false;
-	this.shine = true;
-	this.shadow = true;
+	this.fill = options.fill || true;
+	this.stroke = options.stroke || true;
+	this.shine = options.shine || true;
+	this.shadow = options.shadow || true;
 	this.shineWidth = 1.2;
 	this.shineStren = 50;
 	this.vertices3D = [
@@ -90,26 +92,38 @@ BGem3.Renderer = function( scene, options ) {
 
 	this.camera = _scene.cams[0];
 
+	this.callback_chain = [
+		'make_transform',
+		'interpret_cam',
+		'translate_scene',
+ 		'project2d',
+ 		'z_sort',
+		'draw'
+ 	]
+
 	this.render = function() { // kick off the callback chain
-		$({})
+		this.callback_chain.forEach( function( index ) {
+			_renderer.tasks[ index ]();
+		});
+		/*$({})
 			.queue(_renderer.tasks.make_transform)
 			.queue(_renderer.tasks.interpret_cam)
 			.queue(_renderer.tasks.translate_scene)
 			.queue(_renderer.tasks.project2d)
 			.queue(_renderer.tasks.z_sort)
-			.queue(_renderer.tasks.draw);
+			.queue(_renderer.tasks.draw);*/
 	}
 	this.tasks = {
-		make_transform: function(next) { // make copy of each obj's vertices3D array for transforms
+		make_transform: function() { // make copy of each obj's vertices3D array for transforms
 			for ( var i=0; i<_scene.objs.length; i++ ) {
 				_scene.objs[i].mesh.transform = JSON.parse( JSON.stringify( _scene.objs[i].mesh.vertices3D ) );
 			}
-			next();
 		},
-		interpret_cam: function(next) { // apply user input to camera position/rotation
+		interpret_cam: function() { // apply user input to camera position/rotation
 			var camera = _renderer.camera;
 			var friction = camera.friction;
 			var angle = camera.rotation[1]; // y rotation (look L/R)
+			// camera position
 			if ( camera.w > 0 ) {
 				camera.position[2] += Math.cos( Maths.radians( angle ) ) * camera.w;
 				camera.position[0] -= Math.sin( Maths.radians( angle ) ) * camera.w;
@@ -138,6 +152,7 @@ BGem3.Renderer = function( scene, options ) {
 					camera.d -= friction;
 				}
 			}
+			// camera rotation
 			if ( camera.u > 0 ) {
 				camera.rotation[0] += camera.u;
 				if ( camera.u < 1 ) {
@@ -162,9 +177,8 @@ BGem3.Renderer = function( scene, options ) {
 					camera.r -= friction;
 				}
 			}
-			next();
 		},
-		translate_scene: function(next) { // perform object and camera transforms
+		translate_scene: function() { // perform object and camera transforms
 			for ( var i=0; i<_scene.objs.length; i++ ) {
 				var transform = _scene.objs[i].mesh.transform.slice();
 				_scene.objs[i].mesh.transform = Maths.rotate( transform, _scene.objs[i].mesh.rotation );
@@ -172,12 +186,11 @@ BGem3.Renderer = function( scene, options ) {
 				_scene.objs[i].mesh.transform = Maths.translate( transform, _renderer.camera.position );
 				_scene.objs[i].mesh.transform = Maths.rotate( transform, _renderer.camera.rotation );
 			}
-			next();
 		},
-		project2d: function(next) { // convert 3D coordinates to 2D coordinates
+		project2d: function() { // convert 3D coordinates to 2D coordinates
 			for ( var i=0; i<_scene.objs.length; i++ ) {
 				for ( var j=0; j<_scene.objs[i].mesh.transform.length; j++ ) {
-					if ( scene.objs[i].mesh.transform[j][2] >= 0 ) {
+					if ( scene.objs[i].mesh.transform[j][2] >= 0 ) { // z 3D
 						var scaleRatio = _renderer.camera.focalLen * -scene.objs[i].mesh.transform[j][2];
 					} else {
 						var scaleRatio = _renderer.camera.focalLen / scene.objs[i].mesh.transform[j][2];
@@ -187,9 +200,8 @@ BGem3.Renderer = function( scene, options ) {
 					_scene.objs[i].mesh.vertices2D.push( [x,y] );
 				}
 			}
-			next();
 		},
-		z_sort: function(next) { // sort objects by z-index and set face rendering options
+		z_sort: function() { // sort objects by z-index and set face rendering options
 			_renderer.zSort = [];
 			for ( var i=0; i<_scene.objs.length; i++ ) {
 				for ( var j=0; j<_scene.objs[i].mesh.faces.length; j++ ) {
@@ -200,9 +212,10 @@ BGem3.Renderer = function( scene, options ) {
 						zIndex += _scene.objs[i].mesh.transform[ index ][2];
 						zObj.push( _scene.objs[i].mesh.vertices2D[ index ] ); // zSort[i][0 - 3]: face vertices
 					}
-
 					zObj.push( zIndex ); // zSort[i][4]: z-index
-					if ( zIndex < -50 ) {
+
+					// don't draw objects behind us
+					if ( zIndex < -_scene.clipDist ) {
 						zObj.push( true ); // zSort[i][5]: visible?
 					} else {
 						zObj.push( false );
@@ -222,7 +235,9 @@ BGem3.Renderer = function( scene, options ) {
 						shineWidth: _scene.objs[i].mesh.shineWidth,
 						shineStren: _scene.objs[i].mesh.shineStren,
 						normal: normal,
-						textured: _scene.objs[i].mesh.textured
+						textured: _scene.objs[i].mesh.textured,
+						fill: _scene.objs[i].mesh.fill,
+						stroke: _scene.objs[i].mesh.stroke
 					}
 					zObj.push( options ); // zSort[i][6]: render options
 
@@ -234,7 +249,6 @@ BGem3.Renderer = function( scene, options ) {
 			_renderer.zSort.sort(function(a,b) {
 				return a[4] - b[4];
 			});
-			next();
 		},
 		draw: function() { // draw to the canvas
 			var ctx = _renderer.ctx;
@@ -271,28 +285,65 @@ BGem3.Renderer = function( scene, options ) {
 							r = Math.floor( color[0]*shade ) + Math.floor( color[0]*shine + shineStren*shine ),
 							g = Math.floor( color[1]*shade ) + Math.floor( color[1]*shine + shineStren*shine ),
 							b = Math.floor( color[2]*shade ) + Math.floor( color[2]*shine + shineStren*shine );
-							if ( _scene.fog ) {
-								var dist = -_renderer.zSort[i][4] / 4;
+							if ( _scene.fog ) { // if fog is enabled
+								var dist = -_renderer.zSort[i][4] / 4; // object distance from cam
 								var fogRatio = dist / _scene.fogDist;
 								if (fogRatio>1) {
 									fogRatio=1;
 								}
+								// figure out the difference between current color and fog color, multiply the difference by the fogRatio, then apply that difference to the color
 								var Rdiff = r - _scene.fogColor[0];
-								r = Math.floor( r - (Rdiff*fogRatio) );
+								r = Math.floor( r - ( Rdiff*fogRatio ) );
 								var Gdiff = g - _scene.fogColor[1];
-								g = Math.floor( g - (Gdiff*fogRatio) );
+								g = Math.floor( g - ( Gdiff*fogRatio ) );
 								var Bdiff = b - _scene.fogColor[2];
-								b = Math.floor( b - (Bdiff*fogRatio) );
+								b = Math.floor( b - ( Bdiff*fogRatio ) );
 							}
 						}
-						ctx.strokeStyle="rgb("+r+","+g+","+b+")";
-						ctx.stroke();
-						ctx.fillStyle="rgb("+r+","+g+","+b+")";
-						ctx.fill();
+						if ( _renderer.zSort[i][6].fill ) {
+							ctx.fillStyle="rgb("+r+","+g+","+b+")";
+							ctx.fill();
+						}
 						if ( _renderer.zSort[i][6].stroke ) {
-							ctx.strokeStyle = "rgb(0,0,0)";
+							ctx.strokeStyle="rgb("+r+","+g+","+b+")";
 							ctx.stroke();
 						}
+						/*if ( _renderer.zSort[i][6].textured ) {
+							var tris = [[0,1,3],[1,2,3]];
+							var uvs = [ [0, 640], [640, 640], [640, 0], [0, 0] ];
+							for (var t=0; t<tris.length; t++) {
+								ctx.save();
+								ctx.beginPath();
+								ctx.moveTo( pts[0][0], pts[0][1] );
+								ctx.lineTo( pts[1][0], pts[1][1] );
+								ctx.lineTo( pts[2][0], pts[2][1] );
+								ctx.lineTo( pts[3][0], pts[3][1] );
+								ctx.lineTo( pts[0][0], pts[0][1] );
+								ctx.closePath();
+								ctx.clip();
+							    var pp = tris[t],
+							        p1 = pp[0], p2 = pp[1], p3 = pp[2],
+							        x0 = pts[p1][0], x1 = pts[p2][0], x2 = pts[p3][0],
+							        y0 = pts[p1][1], y1 = pts[p2][1], y2 = pts[p3][1],
+							        u0 = uvs[p1][0], u1 = uvs[p2][0], u2 = uvs[p3][0],
+							        v0 = uvs[p1][1], v1 = uvs[p2][1], v2 = uvs[p3][1];
+							    // Cramer's rule
+							    var delta = u0*v1 + v0*u2 + u1*v2 - v1*u2 - v0*u1 - u0*v2,
+							        da = x0*v1 + v0*x2 + x1*v2 - v1*x2 - v0*x1 - x0*v2,
+							        db = u0*x1 + x0*u2 + u1*x2 - x1*u2 - x0*u1 - u0*x2,
+							        dc = u0*v1*x2 + v0*x1*u2 + x0*u1*v2 - x0*v1*u2 - v0*u1*x2 - u0*x1*v2,
+							        dd = y0*v1 + v0*y2 + y1*v2 - v1*y2 - v0*y1 - y0*v2,
+							        de = u0*y1 + y0*u2 + u1*y2 - y1*u2 - y0*u1 - u0*y2,
+							        df = u0*v1*y2 + v0*y1*u2 + y0*u1*v2 - y0*v1*u2 - v0*u1*y2 - u0*y1*v2;
+							    ctx.transform(
+							        da/delta, dd/delta,
+							        db/delta, de/delta,
+							        dc/delta, df/delta
+							    );
+							    ctx.drawImage( _renderer.texture, 0, 0);
+								ctx.restore();
+							}
+						}*/
 						ctx.restore();
 					}
 				}
@@ -309,62 +360,61 @@ BGem3.Controller = function( scene, renderer ) {
 		var camera = _renderer.camera;
 		var speed = camera.speed;
 		var friction = camera.friction;
-		$( window ).bind({
-			keydown: function( event ) {
-				switch ( event.keyCode ) {
-					case 87: // W
-						camera.w = speed;
-						break;
-					case 65: // A
-						camera.a = speed;
-						break;
-					case 83: // S
-						camera.s = speed;
-						break;
-					case 68: // D
-						camera.d = speed;
-						break;
-					case 38: // up
-						camera.u = speed;
-						break;
-					case 40: // down
-						camera.o = speed;
-						break;
-					case 37: // left
-						camera.l = speed;
-						break;
-					case 39: // right
-						camera.r = speed;
-						break;
-				}
-			},
-			keyup: function( event ) {
-				switch ( event.keyCode ) {
-					case 87: // W
-						camera.w -= friction;
-						break;
-					case 65: // A
-						camera.a -= friction;
-						break;
-					case 83: // S
-						camera.s -= friction;
-						break;
-					case 68: // D
-						camera.d -= friction;
-						break;
-					case 38: // up
-						camera.u = 0; //-= friction;
-						break;
-					case 40: // down
-						camera.o = 0; //-= friction;
-						break;
-					case 37: // left
-						camera.l = 0; //-= friction;
-						break;
-					case 39: // right
-						camera.r = 0; //-= friction;
-						break;
-				}
+		window.addEventListener( "keydown", function( event ) {
+			switch ( event.keyCode ) {
+				case 87: // W
+					camera.w = speed;
+					break;
+				case 65: // A
+					camera.a = speed;
+					break;
+				case 83: // S
+					camera.s = speed;
+					break;
+				case 68: // D
+					camera.d = speed;
+					break;
+				case 38: // up
+					camera.u = speed;
+					break;
+				case 40: // down
+					camera.o = speed;
+					break;
+				case 37: // left
+					camera.l = speed;
+					break;
+				case 39: // right
+					camera.r = speed;
+					break;
+			}
+		});
+
+		window.addEventListener( "keyup", function( event ) {
+			switch ( event.keyCode ) {
+				case 87: // W
+					camera.w -= friction;
+					break;
+				case 65: // A
+					camera.a -= friction;
+					break;
+				case 83: // S
+					camera.s -= friction;
+					break;
+				case 68: // D
+					camera.d -= friction;
+					break;
+				case 38: // up
+					camera.u = 0;
+					break;
+				case 40: // down
+					camera.o = 0;
+					break;
+				case 37: // left
+					camera.l = 0;
+					break;
+				case 39: // right
+					camera.r = 0;
+					break;
 			}
 		});
 	}
@@ -493,7 +543,6 @@ BGem3.Maths = function() {
 			by = light[1],
 			bz = light[2];
 		var angle = Math.acos( (ax*bx+ay*by+az*bz) / Math.sqrt((ax*ax+ay*ay+az*az)*(bx*bx+by*by+bz*bz)) );
-			//normal = {x:Cx, y:Cy, z:Cz, angle:angle};
 		return angle;
 	}
 };
@@ -501,5 +550,3 @@ BGem3.Maths = function() {
 var Maths = new BGem3.Maths();
 
 // the end.
-
-// http://stackoverflow.com/questions/4774172/image-manipulation-and-texture-mapping-using-html5-canvas

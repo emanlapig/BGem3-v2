@@ -1,13 +1,13 @@
 <html>
 <head>
 	<title>BGem3 v2</title>
-	<script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>
 	<script type="text/javascript" src="BGem3.js"></script>
 
 	<style type="text/css">
 		body {
 			overflow:hidden;
 			background-color:#fff;
+			margin:0;
 		}
 		#viewport {
 			display:block;
@@ -24,9 +24,9 @@
 	</canvas>
 
 	<script type="text/javascript">
-		$( function() {
+		function init() {
 			// create scene
-			var scene = new BGem3.Scene( { bg:[ 142, 214, 255 ], fogColor: [ 142, 214, 255 ] } );
+			var scene = new BGem3.Scene( { bg:[ 142, 214, 255 ] } );
 
 			var camera = new BGem3.Camera( { pos:[ 0, 0, -200 ], rot:[ 0, 10, 0 ], fl:800, speed:1, fr:0.1 } );
 
@@ -36,14 +36,14 @@
 			for ( var i=0; i<100; i++ ) {
 				var spread = 150;
 				var cube = new BGem3.Obj3D( new BGem3.CubeMesh({
-						size:5, 
+						size:3, 
 						pos:[ 
 							Maths.random(-spread,spread)+0.1, 
-							Maths.random(-spread,spread)+0.1, 
+							Maths.random(-20,-10)+0.1, 
 							Maths.random(-spread,spread)+0.1 
 						], 
 						color:[ 102, 45, 145 ],
-						textured:false
+						fill:false
 					}) );
 				scene.objs.push( cube );
 			}
@@ -80,13 +80,14 @@
 
 			var controller = new BGem3.Controller( scene, renderer );
 			controller.init();
-		});
+		}
 
 		var play = true;
 
 		function stopAnimation() {
 			play = false;
 		}
+		window.onload = init;
 	</script>
 </body>
 </html>
