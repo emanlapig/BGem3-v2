@@ -48,11 +48,11 @@ BGem3.CubeMesh = function( options ) {
 	this.rotation = options.rot || [ 0, 0, 0 ];
 	this.position = options.pos || [ 0, 0, 0 ];
 	this.color = options.color || [ 102, 45, 145 ];
-	this.textured = options.textured || false;
-	this.fill = options.fill || true;
-	this.stroke = options.stroke || true;
-	this.shine = options.shine || true;
-	this.shadow = options.shadow || true;
+	this.textured = ( options.textured === undefined )? options.textured : false;
+	this.fill = ( options.fill === undefined )? options.fill : true;
+	this.stroke = ( options.stroke === undefined )? options.stroke : true;
+	this.shine = ( options.shine === undefined )? options.shine : true;
+	this.shadow = ( options.shadow === undefined )? options.shadow : true;
 	this.shineWidth = 1.2;
 	this.shineStren = 50;
 	this.vertices3D = [
