@@ -4,7 +4,7 @@ BGem3.Scene = function( options ) {
 	this.objs = [];
 	this.cams = [];
 	this.bg = options.bg || [ 142, 214, 255 ];
-	this.fog = options.fog || true;
+	this.fog = ( options.fog === undefined )? options.fog : true;
 	this.fogColor = options.fogColor || options.bg || [ 142, 214, 255 ];
 	this.fogDist = 800; // distance at which objects disappear
 	this.clipDist = 50; // buffer distance for clipping objects behind us
