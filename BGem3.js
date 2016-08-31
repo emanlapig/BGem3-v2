@@ -92,26 +92,19 @@ BGem3.Renderer = function( scene, options ) {
 
 	this.camera = _scene.cams[0];
 
-	this.callback_chain = [
+	this.queue = [
 		'make_transform',
 		'interpret_cam',
 		'translate_scene',
  		'project2d',
  		'z_sort',
 		'draw'
- 	]
+ 	];
 
 	this.render = function() { // kick off the callback chain
-		this.callback_chain.forEach( function( index ) {
+		this.queue.forEach( function( index ) {
 			_renderer.tasks[ index ]();
 		});
-		/*$({})
-			.queue(_renderer.tasks.make_transform)
-			.queue(_renderer.tasks.interpret_cam)
-			.queue(_renderer.tasks.translate_scene)
-			.queue(_renderer.tasks.project2d)
-			.queue(_renderer.tasks.z_sort)
-			.queue(_renderer.tasks.draw);*/
 	}
 	this.tasks = {
 		make_transform: function() { // make copy of each obj's vertices3D array for transforms
@@ -207,6 +200,7 @@ BGem3.Renderer = function( scene, options ) {
 				for ( var j=0; j<_scene.objs[i].mesh.faces.length; j++ ) {
 					var zIndex = 0;
 					var zObj = [];
+					// get z-index by adding total z of all face points
 					for ( var k=0; k<_scene.objs[i].mesh.faces[j].length; k++ ) {
 						var index = _scene.objs[i].mesh.faces[j][k];
 						zIndex += _scene.objs[i].mesh.transform[ index ][2];
@@ -254,7 +248,7 @@ BGem3.Renderer = function( scene, options ) {
 			var ctx = _renderer.ctx;
 			ctx.clearRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // clear canvas
 			ctx.fillStyle="rgb("+_scene.bg[0]+","+_scene.bg[1]+","+_scene.bg[2]+")";
-			ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight );
+			ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // fill background color
 			for ( var i=0; i<_renderer.zSort.length; i++ ) {
 				if ( _renderer.zSort[i][5] ) { // if face is visible
 					_renderer.zSort[i][5] = Maths.backface_cull( _renderer.zSort[i] ); // backface cull
@@ -308,42 +302,6 @@ BGem3.Renderer = function( scene, options ) {
 							ctx.strokeStyle="rgb("+r+","+g+","+b+")";
 							ctx.stroke();
 						}
-						/*if ( _renderer.zSort[i][6].textured ) {
-							var tris = [[0,1,3],[1,2,3]];
-							var uvs = [ [0, 640], [640, 640], [640, 0], [0, 0] ];
-							for (var t=0; t<tris.length; t++) {
-								ctx.save();
-								ctx.beginPath();
-								ctx.moveTo( pts[0][0], pts[0][1] );
-								ctx.lineTo( pts[1][0], pts[1][1] );
-								ctx.lineTo( pts[2][0], pts[2][1] );
-								ctx.lineTo( pts[3][0], pts[3][1] );
-								ctx.lineTo( pts[0][0], pts[0][1] );
-								ctx.closePath();
-								ctx.clip();
-							    var pp = tris[t],
-							        p1 = pp[0], p2 = pp[1], p3 = pp[2],
-							        x0 = pts[p1][0], x1 = pts[p2][0], x2 = pts[p3][0],
-							        y0 = pts[p1][1], y1 = pts[p2][1], y2 = pts[p3][1],
-							        u0 = uvs[p1][0], u1 = uvs[p2][0], u2 = uvs[p3][0],
-							        v0 = uvs[p1][1], v1 = uvs[p2][1], v2 = uvs[p3][1];
-							    // Cramer's rule
-							    var delta = u0*v1 + v0*u2 + u1*v2 - v1*u2 - v0*u1 - u0*v2,
-							        da = x0*v1 + v0*x2 + x1*v2 - v1*x2 - v0*x1 - x0*v2,
-							        db = u0*x1 + x0*u2 + u1*x2 - x1*u2 - x0*u1 - u0*x2,
-							        dc = u0*v1*x2 + v0*x1*u2 + x0*u1*v2 - x0*v1*u2 - v0*u1*x2 - u0*x1*v2,
-							        dd = y0*v1 + v0*y2 + y1*v2 - v1*y2 - v0*y1 - y0*v2,
-							        de = u0*y1 + y0*u2 + u1*y2 - y1*u2 - y0*u1 - u0*y2,
-							        df = u0*v1*y2 + v0*y1*u2 + y0*u1*v2 - y0*v1*u2 - v0*u1*y2 - u0*y1*v2;
-							    ctx.transform(
-							        da/delta, dd/delta,
-							        db/delta, de/delta,
-							        dc/delta, df/delta
-							    );
-							    ctx.drawImage( _renderer.texture, 0, 0);
-								ctx.restore();
-							}
-						}*/
 						ctx.restore();
 					}
 				}
@@ -388,7 +346,6 @@ BGem3.Controller = function( scene, renderer ) {
 					break;
 			}
 		});
-
 		window.addEventListener( "keyup", function( event ) {
 			switch ( event.keyCode ) {
 				case 87: // W
@@ -504,7 +461,7 @@ BGem3.Maths = function() {
 		var c = b - a;
 		return Math.floor( Math.random()*c+a );
 	}
-	this.round2 = function(num) {
+	this.round2 = function( num ) {
 	    return Math.round((num + 0.00001) * 100) / 100;
 	}
 	this.backface_cull = function( face ) {
