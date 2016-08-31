@@ -4,7 +4,7 @@ BGem3.Scene = function( options ) {
 	this.objs = [];
 	this.cams = [];
 	this.bg = options.bg || [ 142, 214, 255 ];
-	this.fog = ( options.fog === undefined )? options.fog : true;
+	this.fog = ( options.fog === undefined )? true : options.fog;
 	this.fogColor = options.fogColor || options.bg || [ 142, 214, 255 ];
 	this.fogDist = 800; // distance at which objects disappear
 	this.clipDist = 50; // buffer distance for clipping objects behind us
@@ -48,11 +48,11 @@ BGem3.CubeMesh = function( options ) {
 	this.rotation = options.rot || [ 0, 0, 0 ];
 	this.position = options.pos || [ 0, 0, 0 ];
 	this.color = options.color || [ 102, 45, 145 ];
-	this.textured = ( options.textured === undefined )? options.textured : false;
-	this.fill = ( options.fill === undefined )? options.fill : true;
-	this.stroke = ( options.stroke === undefined )? options.stroke : true;
-	this.shine = ( options.shine === undefined )? options.shine : true;
-	this.shadow = ( options.shadow === undefined )? options.shadow : true;
+	this.textured = ( options.textured === undefined )? false : options.textured;
+	this.fill = ( options.fill === undefined )? true : options.fill;
+	this.stroke = ( options.stroke === undefined )? true : options.stroke;
+	this.shine = ( options.shine === undefined )? true : options.shine;
+	this.shadow = ( options.shadow === undefined )? true : options.shadow;
 	this.shineWidth = 1.2;
 	this.shineStren = 50;
 	this.vertices3D = [
