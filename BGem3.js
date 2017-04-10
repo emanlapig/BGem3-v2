@@ -108,9 +108,9 @@ var Background = function( options ) {
 	this.ground = options.ground;
 	this.ctx = options.ctx;
 	this.can = options.can;
-}
+};
 
-var Renderer = function( scene, options ){
+var Renderer = function( scene, options ) {
 	this.fps = options.fps;
 	this.interval = 1/this.fps * 1000;
 	this.maxWidth = options.maxWidth;
@@ -126,245 +126,235 @@ var Renderer = function( scene, options ){
 
 	this.camera = _scene.cams[0];
 
-	this.render = function() { // kick off the task list
-		queue.forEach( function( index ) {
-			index( _scene, _renderer );
+	this.queue = [
+		'make_transform',
+		'interpret_cam',
+		'translate_scene',
+ 		'project2d',
+ 		'z_sort',
+		'draw'
+ 	];
+
+	this.render = function() { // kick off the callback chain
+		this.queue.forEach( function( index ) {
+			_renderer.tasks[ index ]();
 		});
 	}
-};
-
-var queue = [
-	r_transform, // make_transform
-	r_cam, // interpret_cam
-	r_scene, // translate_scene
-	r_project, // project2d
-	r_zsort, // z_sort
-	r_draw, // draw
-];
-
-function r_transform( _scene, _renderer ) { // MAKE_TRANSFORM make copy of each obj's vertices3D array for transforms
-	for ( var i=0; i<_scene.objs.length; i++ ) {
-		_scene.objs[i].mesh.transform = JSON.parse( JSON.stringify( _scene.objs[i].mesh.vertices3D ) );
-	}
-};
-
-function r_cam( _scene, _renderer ) { // INTERPRET_CAM apply user input to _camera pos/rot
-	var _camera = _renderer.camera;
-	var friction = _camera.friction;
-	var angle = _camera.rot[1]; // y rot (look L/R)
-	// _camera pos
-	if ( _camera.w > 0 ) {
-		_camera.pos[2] += Math.cos( radians( angle ) ) * _camera.w;
-		_camera.pos[0] -= Math.sin( radians( angle ) ) * _camera.w;
-		if ( _camera.w < 1 ) {
-			_camera.w -= friction;
-		}
-	}
-	if ( _camera.s > 0 ) {
-		_camera.pos[2] -= Math.cos( radians( angle ) ) * _camera.s;
-		_camera.pos[0] += Math.sin( radians( angle ) ) * _camera.s;
-		if ( _camera.s < 1 ) {
-			_camera.s -= friction;
-		}
-	}
-	if ( _camera.a > 0 ) {
-		_camera.pos[2] -= Math.sin( radians( angle ) ) * _camera.a;
-		_camera.pos[0] -= Math.cos( radians( angle ) ) * _camera.a;
-		if ( _camera.a < 1 ) {
-			_camera.a -= friction;
-		}
-	}
-	if ( _camera.d > 0 ) {
-		_camera.pos[2] += Math.sin( radians( angle ) ) * _camera.d;
-		_camera.pos[0] += Math.cos( radians( angle ) ) * _camera.d;
-		if ( _camera.d < 1 ) {
-			_camera.d -= friction;
-		}
-	}
-	// _camera rot
-	if ( _camera.u > 0 ) {
-		if ( _camera.rot[0] < 90 ) {
-			_camera.rot[0] += _camera.u;
-		}
-		if ( _camera.u < 1 ) {
-			_camera.u -= friction;
-		}
-	}
-	if ( _camera.o > 0 ) {
-		if ( _camera.rot[0] >- 90 ) {
-			_camera.rot[0] -= _camera.o;
-		}
-		if ( _camera.o < 1 ) {
-			_camera.o -= friction;
-		}
-	}
-	if ( _camera.l > 0 ) {
-		_camera.rot[1] += _camera.l;
-		if ( _camera.l < 1 ) {
-			_camera.l -= friction;
-		}
-	}
-	if ( _camera.r > 0 ) {
-		_camera.rot[1] -= _camera.r;
-		if ( _camera.r < 1 ) {
-			_camera.r -= friction;
-		}
-	}
-};
-
-function r_scene( _scene, _renderer ) { // TRANSLATE_SCENE perform object and camera transforms
-	for ( var i=0; i<_scene.objs.length; i++ ) {
-		var transform = _scene.objs[i].mesh.transform.slice();
-		_scene.objs[i].mesh.transform = rotate( transform, _scene.objs[i].mesh.rot );
-		_scene.objs[i].mesh.transform = translate( transform, _scene.objs[i].mesh.pos );
-		_scene.objs[i].mesh.transform = translate( transform, _renderer.camera.pos );
-		_scene.objs[i].mesh.transform = rotate( transform, _renderer.camera.rot );
-	}
-};
-
-function r_project( _scene, _renderer ) {// PROJECT2D convert 3D coordinates to 2D coordinates
-	for ( var i=0; i<_scene.objs.length; i++ ) {
-		for ( var j=0; j<_scene.objs[i].mesh.transform.length; j++ ) {
-			if ( _scene.objs[i].mesh.transform[j][2] >= 0 ) { // z behind us
-				var scaleRatio = _renderer.camera.focalLen * -_scene.objs[i].mesh.transform[j][2];
-			} else { // z in front of us
-				var scaleRatio = _renderer.camera.focalLen / _scene.objs[i].mesh.transform[j][2];
+	this.tasks = {
+		make_transform: function() { // make copy of each obj's vertices3D array for transforms
+			for ( var i=0; i<_scene.objs.length; i++ ) {
+				_scene.objs[i].mesh.transform = JSON.parse( JSON.stringify( _scene.objs[i].mesh.vertices3D ) );
 			}
-			var x = round2( _scene.objs[i].mesh.transform[j][0] * scaleRatio + _renderer.centerX );
-			var y = round2( _scene.objs[i].mesh.transform[j][1] * scaleRatio + _renderer.centerY );
-			_scene.objs[i].mesh.vertices2D.push( [x,y] );
-		}
-	}
-};
-
-function r_zsort( _scene, _renderer ) { // Z_SORT sort objects by z-index and set face rendering options
-	_renderer.zSort = [];
-	for ( var i=0; i<_scene.objs.length; i++ ) {
-		for ( var j=0; j<_scene.objs[i].mesh.faces.length; j++ ) {
-			var zIndex = 0;
-			var zObj = [];
-			// get z-index by adding total z of all face points
-			for ( var k=0; k<_scene.objs[i].mesh.faces[j].length; k++ ) {
-				var index = _scene.objs[i].mesh.faces[j][k];
-				zIndex += _scene.objs[i].mesh.transform[ index ][2];
-				zObj.push( _scene.objs[i].mesh.vertices2D[ index ] ); // zSort[i][0 - 3]: face vertices
+		},
+		interpret_cam: function() { // apply user input to camera pos/rot
+			var camera = _renderer.camera;
+			var friction = camera.friction;
+			var angle = camera.rot[1]; // y rot (look L/R)
+			// camera pos
+			if ( camera.w > 0 ) {
+				camera.pos[2] += Math.cos( radians( angle ) ) * camera.w;
+				camera.pos[0] -= Math.sin( radians( angle ) ) * camera.w;
+				if ( camera.w < 1 ) {
+					camera.w -= friction;
+				}
 			}
-			zObj.push( zIndex ); // zSort[i][4]: z-index
+			if ( camera.s > 0 ) {
+				camera.pos[2] -= Math.cos( radians( angle ) ) * camera.s;
+				camera.pos[0] += Math.sin( radians( angle ) ) * camera.s;
+				if ( camera.s < 1 ) {
+					camera.s -= friction;
+				}
+			}
+			if ( camera.a > 0 ) {
+				camera.pos[2] -= Math.sin( radians( angle ) ) * camera.a;
+				camera.pos[0] -= Math.cos( radians( angle ) ) * camera.a;
+				if ( camera.a < 1 ) {
+					camera.a -= friction;
+				}
+			}
+			if ( camera.d > 0 ) {
+				camera.pos[2] += Math.sin( radians( angle ) ) * camera.d;
+				camera.pos[0] += Math.cos( radians( angle ) ) * camera.d;
+				if ( camera.d < 1 ) {
+					camera.d -= friction;
+				}
+			}
+			// camera rot
+			if ( camera.u > 0 ) {
+				camera.rot[0] += camera.u;
+				if ( camera.u < 1 ) {
+					camera.u -= friction;
+				}
+			}
+			if ( camera.o > 0 ) {
+				camera.rot[0] -= camera.o;
+				if ( camera.o < 1 ) {
+					camera.o -= friction;
+				}
+			}
+			if ( camera.l > 0 ) {
+				camera.rot[1] += camera.l;
+				if ( camera.l < 1 ) {
+					camera.l -= friction;
+				}
+			}
+			if ( camera.r > 0 ) {
+				camera.rot[1] -= camera.r;
+				if ( camera.r < 1 ) {
+					camera.r -= friction;
+				}
+			}
+		},
+		translate_scene: function() { // perform object and camera transforms
+			for ( var i=0; i<_scene.objs.length; i++ ) {
+				var transform = _scene.objs[i].mesh.transform.slice();
+				_scene.objs[i].mesh.transform = rotate( transform, _scene.objs[i].mesh.rot );
+				_scene.objs[i].mesh.transform = translate( transform, _scene.objs[i].mesh.pos );
+				_scene.objs[i].mesh.transform = translate( transform, _renderer.camera.pos );
+				_scene.objs[i].mesh.transform = rotate( transform, _renderer.camera.rot );
+			}
+		},
+		project2d: function() { // convert 3D coordinates to 2D coordinates
+			for ( var i=0; i<_scene.objs.length; i++ ) {
+				for ( var j=0; j<_scene.objs[i].mesh.transform.length; j++ ) {
+					if ( scene.objs[i].mesh.transform[j][2] >= 0 ) { // z 3D
+						var scaleRatio = _renderer.camera.focalLen * -scene.objs[i].mesh.transform[j][2];
+					} else {
+						var scaleRatio = _renderer.camera.focalLen / scene.objs[i].mesh.transform[j][2];
+					}
+					var x = round2( scene.objs[i].mesh.transform[j][0] * scaleRatio + _renderer.centerX );
+					var y = round2( scene.objs[i].mesh.transform[j][1] * scaleRatio + _renderer.centerY );
+					_scene.objs[i].mesh.vertices2D.push( [x,y] );
+				}
+			}
+		},
+		z_sort: function() { // sort objects by z-index and set face rendering options
+			_renderer.zSort = [];
+			for ( var i=0; i<_scene.objs.length; i++ ) {
+				for ( var j=0; j<_scene.objs[i].mesh.faces.length; j++ ) {
+					var zIndex = 0;
+					var zObj = [];
+					// get z-index by adding total z of all face points
+					for ( var k=0; k<_scene.objs[i].mesh.faces[j].length; k++ ) {
+						var index = _scene.objs[i].mesh.faces[j][k];
+						zIndex += _scene.objs[i].mesh.transform[ index ][2];
+						zObj.push( _scene.objs[i].mesh.vertices2D[ index ] ); // zSort[i][0 - 3]: face vertices
+					}
+					zObj.push( zIndex ); // zSort[i][4]: z-index
 
-			// don't draw objects behind us
-			if ( zIndex < -_scene.clipDist ) {
-				zObj.push( true ); // zSort[i][5]: visible?
+					// don't draw objects behind us
+					if ( zIndex < -_scene.clipDist ) {
+						zObj.push( true ); // zSort[i][5]: visible?
+					} else {
+						zObj.push( false );
+					}
+
+					var tri = [
+							_scene.objs[i].mesh.transform[ _scene.objs[i].mesh.faces[j][0] ],
+							_scene.objs[i].mesh.transform[ _scene.objs[i].mesh.faces[j][1] ],
+							_scene.objs[i].mesh.transform[ _scene.objs[i].mesh.faces[j][2] ]
+						];
+					var normal = get_normal( tri );
+
+					var options = {
+						color: _scene.objs[i].mesh.color,
+						shine: _scene.objs[i].mesh.shine,
+						shadow: _scene.objs[i].mesh.shadow,
+						shineWidth: _scene.objs[i].mesh.shineWidth,
+						shineStren: _scene.objs[i].mesh.shineStren,
+						normal: normal,
+						textured: _scene.objs[i].mesh.textured,
+						fill: _scene.objs[i].mesh.fill,
+						stroke: _scene.objs[i].mesh.stroke
+					}
+					zObj.push( options ); // zSort[i][6]: render options
+
+					_renderer.zSort.push( zObj );
+				}
+				_scene.objs[i].mesh.transform = [];
+				_scene.objs[i].mesh.vertices2D = [];
+			}
+			_renderer.zSort.sort(function(a,b) {
+				return a[4] - b[4];
+			});
+		},
+		draw: function() { // draw to the canvas
+			var ctx = _renderer.ctx;
+			ctx.clearRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // clear canvas
+			if ( _renderer.bg ) {
+				r_draw_bg( _renderer.bg, ctx, _renderer.camera );
 			} else {
-				zObj.push( false );
+				ctx.fillStyle="rgb(142, 214, 255)";
+				ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // fill background color
 			}
-
-			// get face 3D normal for shading calculations
-			var tri = [
-					_scene.objs[i].mesh.transform[ _scene.objs[i].mesh.faces[j][0] ],
-					_scene.objs[i].mesh.transform[ _scene.objs[i].mesh.faces[j][1] ],
-					_scene.objs[i].mesh.transform[ _scene.objs[i].mesh.faces[j][2] ]
-				];
-			var normal = get_normal( tri );
-
-			// prepare options
-			var options = {
-				color: _scene.objs[i].mesh.color,
-				shine: _scene.objs[i].mesh.shine,
-				shadow: _scene.objs[i].mesh.shadow,
-				shineWidth: _scene.objs[i].mesh.shineWidth,
-				shineStren: _scene.objs[i].mesh.shineStren,
-				normal: normal,
-				textured: _scene.objs[i].mesh.textured,
-				fill: _scene.objs[i].mesh.fill,
-				stroke: _scene.objs[i].mesh.stroke
-			}
-			zObj.push( options ); // zSort[i][6]: render options
-
-			_renderer.zSort.push( zObj );
-		}
-		_scene.objs[i].mesh.transform = [];
-		_scene.objs[i].mesh.vertices2D = [];
-	}
-	_renderer.zSort.sort(function(a,b) {
-		return a[4] - b[4];
-	});
-};
-
-function r_draw( _scene, _renderer ) { // DRAW draw to the canvas
-	var ctx = _renderer.ctx;
-	ctx.clearRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // clear canvas
-	if ( _renderer.bg ) {
-		r_draw_bg( _renderer.bg, ctx, _renderer.camera );
-	} else {
-		ctx.fillStyle="rgb(142, 214, 255)";
-		ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // fill background color
-	}
-	for ( var i=0; i<_renderer.zSort.length; i++ ) {
-		if ( _renderer.zSort[i][5] ) { // if face is visible
-			_renderer.zSort[i][5] = backface_cull( _renderer.zSort[i] ); // backface cull
-			if ( _renderer.zSort[i][5] ) { // if face is visible after backface cull
-				var pts = [
-					_renderer.zSort[i][0],
-					_renderer.zSort[i][1],
-					_renderer.zSort[i][2],
-					_renderer.zSort[i][3]
-				];
-				ctx.beginPath();
-				ctx.moveTo( pts[0][0], pts[0][1] );
-				ctx.lineTo( pts[1][0], pts[1][1] );
-				ctx.lineTo( pts[2][0], pts[2][1] );
-				ctx.lineTo( pts[3][0], pts[3][1] );
-				ctx.lineTo( pts[0][0], pts[0][1] );
-				ctx.closePath();
-				var color = _renderer.zSort[i][6].color,
-					r = color[0],
-					g = color[1],
-					b = color[2];
-				// if shadows are enabled
-				if ( _renderer.zSort[i][6].shadow ) { 
-					var normal = _renderer.zSort[i][6].normal;
-					var shineWidth = _renderer.zSort[i][6].shineWidth,
-						shineStren = _renderer.zSort[i][6].shineStren,
-						shade = 1 - ( normal/Math.PI ),
-						shine = 1 - ( normal/Math.PI ) * shineWidth;
-					r = Math.floor( color[0]*shade ) + Math.floor( color[0]*shine + shineStren*shine ),
-					g = Math.floor( color[1]*shade ) + Math.floor( color[1]*shine + shineStren*shine ),
-					b = Math.floor( color[2]*shade ) + Math.floor( color[2]*shine + shineStren*shine );
-					// if fog is enabled
-					if ( _scene.fog ) { 
-						var dist = -_renderer.zSort[i][4] / 4; // object distance from cam
-						var fogRatio = dist / _scene.fogDist;
-						if (fogRatio>1) {
-							fogRatio=1;
+			for ( var i=0; i<_renderer.zSort.length; i++ ) {
+				if ( _renderer.zSort[i][5] ) { // if face is visible
+					_renderer.zSort[i][5] = backface_cull( _renderer.zSort[i] ); // backface cull
+					if ( _renderer.zSort[i][5] ) { // if face is visible after backface cull
+						var pts = [
+							_renderer.zSort[i][0],
+							_renderer.zSort[i][1],
+							_renderer.zSort[i][2],
+							_renderer.zSort[i][3]
+						];
+						ctx.beginPath();
+						ctx.moveTo( pts[0][0], pts[0][1] );
+						ctx.lineTo( pts[1][0], pts[1][1] );
+						ctx.lineTo( pts[2][0], pts[2][1] );
+						ctx.lineTo( pts[3][0], pts[3][1] );
+						ctx.lineTo( pts[0][0], pts[0][1] );
+						ctx.closePath();
+						var color = _renderer.zSort[i][6].color,
+							r = color[0],
+							g = color[1],
+							b = color[2];
+						// if shadows are enabled
+						if ( _renderer.zSort[i][6].shadow ) { 
+							var normal = _renderer.zSort[i][6].normal;
+							var shineWidth = _renderer.zSort[i][6].shineWidth,
+								shineStren = _renderer.zSort[i][6].shineStren,
+								shade = 1 - ( normal/Math.PI ),
+								shine = 1 - ( normal/Math.PI ) * shineWidth;
+							r = Math.floor( color[0]*shade ) + Math.floor( color[0]*shine + shineStren*shine ),
+							g = Math.floor( color[1]*shade ) + Math.floor( color[1]*shine + shineStren*shine ),
+							b = Math.floor( color[2]*shade ) + Math.floor( color[2]*shine + shineStren*shine );
+							// if fog is enabled
+							if ( _scene.fog ) { 
+								var dist = -_renderer.zSort[i][4] / 4; // object distance from cam
+								var fogRatio = dist / _scene.fogDist;
+								if (fogRatio>1) {
+									fogRatio=1;
+								}
+								// figure out the difference between current color and fog color, multiply the difference by the fogRatio, then apply that difference to the color
+								var Rdiff = r - _scene.fogColor[0];
+								r = Math.floor( r - ( Rdiff*fogRatio ) );
+								var Gdiff = g - _scene.fogColor[1];
+								g = Math.floor( g - ( Gdiff*fogRatio ) );
+								var Bdiff = b - _scene.fogColor[2];
+								b = Math.floor( b - ( Bdiff*fogRatio ) );
+							}
 						}
-						// figure out the difference between current color and fog color, multiply the difference by the fogRatio, then apply that difference to the color
-						var Rdiff = r - _scene.fogColor[0];
-						r = Math.floor( r - ( Rdiff*fogRatio ) );
-						var Gdiff = g - _scene.fogColor[1];
-						g = Math.floor( g - ( Gdiff*fogRatio ) );
-						var Bdiff = b - _scene.fogColor[2];
-						b = Math.floor( b - ( Bdiff*fogRatio ) );
+						// if fill is enabled (if false shadows will also not be drawn)
+						if ( _renderer.zSort[i][6].fill ) { 
+							ctx.fillStyle="rgb("+r+","+g+","+b+")";
+							ctx.fill();
+						}
+						// if stroke is enabled (currently uses shaded fill color)
+						if ( _renderer.zSort[i][6].stroke ) { 
+							ctx.strokeStyle="rgb("+r+","+g+","+b+")";
+							ctx.stroke();
+						}
+
+						if ( _renderer.zSort[i][6].textured ) {
+							r_texture( ctx, pts, _renderer );
+						}
+						ctx.restore();
 					}
 				}
-				// if fill is enabled (if false shadows will also not be drawn)
-				if ( _renderer.zSort[i][6].fill ) { 
-					ctx.fillStyle="rgb("+r+","+g+","+b+")";
-					ctx.fill();
-				}
-				// if stroke is enabled (currently uses shaded fill color)
-				if ( _renderer.zSort[i][6].stroke ) { 
-					ctx.strokeStyle="rgb("+r+","+g+","+b+")";
-					ctx.stroke();
-				}
-
-				if ( _renderer.zSort[i][6].textured ) {
-					r_texture( ctx, pts, _renderer );
-				}
-				ctx.restore();
 			}
+			_renderer.zSort = [];
 		}
 	}
-	_renderer.zSort = [];
 };
 
 function r_texture( ctx, pts, _renderer ) {
@@ -421,11 +411,11 @@ function r_draw_bg( bg, ctx, camera ) {
 	ctx.drawImage( bg.can, 0, 0 );
 	ctx.restore();
 	bgctx.restore();
-}
+};
 
-var Controller = function( _scene, _renderer ) {
+var Controller = function( renderer ) {
 	this.init = function() {
-		var camera = _renderer.camera;
+		var camera = renderer.camera;
 		var speed = camera.speed;
 		var friction = camera.friction;
 		window.addEventListener( "keydown", function( event ) {
@@ -594,7 +584,7 @@ function backface_cull( face ) {
 	} else {
 		return false;
 	}
-}
+};
 
 function get_normal( face ) {
 	var light = [ 100, 200, 50 ];

@@ -102,6 +102,8 @@
 			bg.width = maxWidth;
 			bg.height = maxHeight*2;
 
+			scene.fogColor = bgTexture.sky;
+
 			// DEFINE RENDERER
 			var renderer = new Renderer( scene, { 
 				fps: 24, 
@@ -115,7 +117,7 @@
 			var animationFrame = true;
 
 			// DEFINE CONTROLLER
-			var controller = new Controller( scene, renderer );
+			var controller = new Controller( renderer );
 			controller.init();
 
 			// DEFINE GAME
