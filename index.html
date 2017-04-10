@@ -2,6 +2,7 @@
 <head>
 	<title>BGem3 v2</title>
 	<script type="text/javascript" src="BGem3.min.js"></script>
+	<script type="text/javascript" src="Game.min.js"></script>
 
 	<style type="text/css">
 		body {
@@ -23,18 +24,48 @@
 	<canvas id="viewport">
 	</canvas>
 
+	<canvas id="bg" style="visiblity:hidden">
+	</canvas>
+
 	<script type="text/javascript">
+		var maxWidth = window.innerWidth,
+			maxHeight = window.innerHeight;
+
 		function init() {
-			// create scene
-			var scene = new Scene( { bg:[ 142, 214, 255 ] } );
+			// DEFINE SCENE
+			var scene = new Scene();
 
-			var camera = new Camera( { pos:[ 0, 0, -200 ], rot:[ 0, 10, 0 ], fl:800, speed:1, fr:0.1 } );
+			// DEFINE CAMERA
+			var camera = new Camera( { 
+				pos: [ 0, 0, -200 ], 
+				rot: [ 0, 10, 0 ], 
+				fl: 800, // focal length
+				speed: 1, // player velocity
+				fr: 0.1  // player friction
+			} );
 
-			//var texture = new Image();
-			//texture.src = "img/squirtle.jpg";
+			// ADD OBJECTS TO STAGE
+			/*var plane = new Obj3D( new PlaneMesh({ 
+				size: 5, 
+				pos: [ 0, 10, 0 ],
+				rot: [ 0, 180, 0],
+				color: [ 102, 45, 145 ],
+				textured: false
+			}) );
 
-			for ( var i=0; i<125; i++ ) {
-				var spread = 150;
+			scene.objs.push( plane );
+			var cube = new Obj3D( new CubeMesh({ 
+				size: 5, 
+				pos: [ 0, 10, 0 ],
+				rot: [ 0, 180, 0 ],
+				color: [ 102, 45, 145 ],
+				textured: false
+			}) );
+
+			scene.objs.push( cube );*/
+
+			for ( var i=0; i<100; i++ ) {
+				var spread = 100;
 				var cube = new Obj3D( new CubeMesh({
 						size:3, 
 						pos:[ 
@@ -46,21 +77,51 @@
 					}) );
 				scene.objs.push( cube );
 			}
-
 			scene.cams.push( camera );
 
-			var canvas = document.getElementById("viewport");
-			var maxWidth = window.innerWidth;
-			var maxHeight = window.innerHeight;
-			var ctx = canvas.getContext('2d');
+			// DEFINE CANVAS
+			var canvas = document.getElementById("viewport"),
+				ctx = canvas.getContext('2d');
 			canvas.width = maxWidth;
 			canvas.height = maxHeight;
 
-			var renderer = new Renderer( scene, { fps:24, maxWidth:maxWidth, maxHeight:maxHeight, ctx:ctx } );
-			var animate;
+			// DEFINE TEXTURES
+			var texture = new Image();
+			texture.src = "img/squirtle.jpg";
+
+			var bg = document.getElementById("bg"),
+				bgctx = bg.getContext('2d'),
+				bgTexture = new Background({
+					top: [ 0, 51, 153 ],
+					btm: [ 0, 0, 0 ],
+					sky: [ 153, 230, 255 ],
+					ground: [ 0, 204, 102 ],
+					ctx: bgctx,
+					can: bg
+				});
+			bg.width = maxWidth;
+			bg.height = maxHeight*2;
+
+			// DEFINE RENDERER
+			var renderer = new Renderer( scene, { 
+				fps: 24, 
+				maxWidth: maxWidth, 
+				maxHeight: maxHeight, 
+				ctx: ctx,
+				texture: texture,
+				bg: bgTexture
+			} );
+			var animate; // animation interval
 			var animationFrame = true;
 
-			// initialize animation
+			// DEFINE CONTROLLER
+			var controller = new Controller( scene, renderer );
+			controller.init();
+
+			// DEFINE GAME
+			var game = new Game( scene );
+
+			// INITIALIZE ANIMATION
 			if ( animationFrame ) {
 				setTimeout( window.requestAnimationFrame( render ), 1000 );
 			} else {
@@ -70,15 +131,13 @@
 			}
 			function render() {
 				if ( play ) {
+					game.play();
 					renderer.render();
 					if ( animationFrame ) {
-						window.requestAnimationFrame( render );   
+						window.requestAnimationFrame( render );
 					}
 				}
 			}
-
-			var controller = new Controller( scene, renderer );
-			controller.init();
 		}
 
 		var play = true;
@@ -87,6 +146,7 @@
 			play = false;
 		}
 		window.onload = init;
+
 	</script>
 </body>
 </html>

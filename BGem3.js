@@ -1,18 +1,16 @@
-// BGem3 Non-OO
-
-var Scene = function( options ) {
+// BGem3.js
+var Scene = function() {
 	this.objs = [];
 	this.cams = [];
-	this.bg = options.bg || [ 142, 214, 255 ];
-	this.fog = ( options.fog === undefined )? true : options.fog;
-	this.fogColor = options.fogColor || options.bg || [ 142, 214, 255 ];
-	this.fogDist = 800; // distance at which objects disappear
+	this.fog = true;
+	this.fogColor = [ 142, 214, 255 ];
+	this.fogDist = 600; // distance at which objects disappear
 	this.clipDist = 50; // buffer distance for clipping objects behind us
 };
 
 var Camera = function( options ) {
-	this.position = options.pos || [ 0, 0, 0 ];
-	this.rotation = options.rot || [ 0, 0, 0 ];
+	this.pos = options.pos || [ 0, 0, 0 ];
+	this.rot = options.rot || [ 0, 0, 0 ];
 	this.focalLen = options.fl || 800;
 	this.friction = options.fr || 0.2;
 	this.speed = options.speed || 1; // cam movement velocity
@@ -29,10 +27,11 @@ var Camera = function( options ) {
 var Obj3D = function( mesh ) {
 	this.mesh = mesh;
 	this.visible = true;
+	this.life = 3;
 };
 
 var Mesh = function() {
-	this.rotation = [ 0, 0, 0 ];
+	this.rot = [ 0, 0, 0 ];
 	this.vertices3D = [];
 	this.vertices2D = [];
 	this.transform = [];
@@ -41,11 +40,11 @@ var Mesh = function() {
 	this.stroke = true;
 };
 
-var CubeMesh = function( options ) {
+var PlaneMesh = function( options ) {
 	Mesh.apply( this, arguments );
 	this.size = options.size || 5;
-	this.rotation = options.rot || [ 0, 0, 0 ];
-	this.position = options.pos || [ 0, 0, 0 ];
+	this.rot = options.rot || [ 0, 0, 0 ];
+	this.pos = options.pos || [ 0, 0, 0 ];
 	this.color = options.color || [ 102, 45, 145 ];
 	this.textured = ( options.textured === undefined )? false : options.textured;
 	this.fill = ( options.fill === undefined )? true : options.fill;
@@ -56,14 +55,40 @@ var CubeMesh = function( options ) {
 	this.shineStren = 50;
 	this.vertices3D = [
 		[ 0, 0, 0 ], // anchor point
-		[ this.size, -this.size, -this.size ],
-		[ -this.size, -this.size, -this.size ],
-		[ -this.size, this.size, -this.size ],
-		[ this.size, this.size, -this.size ],
-		[ this.size, -this.size, this.size ],
-		[ -this.size, -this.size, this.size ],
-		[ -this.size, this.size, this.size ],
-		[ this.size, this.size, this.size ]
+		[ this.size+this.pos[0], -this.size+this.pos[1], 0 ],
+		[ -this.size+this.pos[0], -this.size+this.pos[1], 0 ],
+		[ -this.size+this.pos[0], this.size+this.pos[1], 0 ],
+		[ this.size+this.pos[0], this.size+this.pos[1], 0 ],
+	];
+	this.faces = [
+		[ 1, 2, 3, 4 ], // front
+	];
+};
+PlaneMesh.prototype = new Mesh();
+
+var CubeMesh = function( options ) {
+	Mesh.apply( this, arguments );
+	this.size = options.size || 5;
+	this.rot = options.rot || [ 0, 0, 0 ];
+	this.pos = options.pos || [ 0, 0, 0 ];
+	this.color = options.color || [ 102, 45, 145 ];
+	this.textured = ( options.textured === undefined )? false : options.textured;
+	this.fill = ( options.fill === undefined )? true : options.fill;
+	this.stroke = ( options.stroke === undefined )? true : options.stroke;
+	this.shine = ( options.shine === undefined )? true : options.shine;
+	this.shadow = ( options.shadow === undefined )? true : options.shadow;
+	this.shineWidth = 1.2;
+	this.shineStren = 50;
+	this.vertices3D = [
+		[ 0, 0, 0 ], // anchor point
+		[ this.size+this.pos[0], -this.size+this.pos[1], -this.size+this.pos[2] ],
+		[ -this.size+this.pos[0], -this.size+this.pos[1], -this.size+this.pos[2] ],
+		[ -this.size+this.pos[0], this.size+this.pos[1], -this.size+this.pos[2] ],
+		[ this.size+this.pos[0], this.size+this.pos[1], -this.size+this.pos[2] ],
+		[ this.size+this.pos[0], -this.size+this.pos[1], this.size+this.pos[2] ],
+		[ -this.size+this.pos[0], -this.size+this.pos[1], this.size+this.pos[2] ],
+		[ -this.size+this.pos[0], this.size+this.pos[1], this.size+this.pos[2] ],
+		[ this.size+this.pos[0], this.size+this.pos[1], this.size+this.pos[2] ]
 	];
 	this.faces = [
 		[ 1, 2, 3, 4 ], // front
@@ -76,6 +101,15 @@ var CubeMesh = function( options ) {
 };
 CubeMesh.prototype = new Mesh();
 
+var Background = function( options ) {
+	this.top = options.top;
+	this.btm = options.btm;
+	this.sky = options.sky;
+	this.ground = options.ground;
+	this.ctx = options.ctx;
+	this.can = options.can;
+}
+
 var Renderer = function( scene, options ){
 	this.fps = options.fps;
 	this.interval = 1/this.fps * 1000;
@@ -85,6 +119,7 @@ var Renderer = function( scene, options ){
 	this.centerY = options.maxHeight/2;
 	this.ctx = options.ctx;
 	this.texture = options.texture;
+	this.bg = options.bg;
 
 	var _scene = scene;
 	var _renderer = this;
@@ -99,98 +134,95 @@ var Renderer = function( scene, options ){
 };
 
 var queue = [
-	r_1, // make_transform
-	r_2, // interpret_cam
-	r_3, // translate_scene
-	r_4, // project2d
-	r_5, // z_sort
-	r_6, // draw
+	r_transform, // make_transform
+	r_cam, // interpret_cam
+	r_scene, // translate_scene
+	r_project, // project2d
+	r_zsort, // z_sort
+	r_draw, // draw
 ];
 
-function r_1( _scene, _renderer ) { // MAKE_TRANSFORM make copy of each obj's vertices3D array for transforms
-	//var _scene = scene;
+function r_transform( _scene, _renderer ) { // MAKE_TRANSFORM make copy of each obj's vertices3D array for transforms
 	for ( var i=0; i<_scene.objs.length; i++ ) {
 		_scene.objs[i].mesh.transform = JSON.parse( JSON.stringify( _scene.objs[i].mesh.vertices3D ) );
 	}
 };
 
-function r_2( _scene, _renderer ) { // INTERPRET_CAM apply user input to _camera position/rotation
-	//var _scene = scene;
-	//var _renderer = renderer;
+function r_cam( _scene, _renderer ) { // INTERPRET_CAM apply user input to _camera pos/rot
 	var _camera = _renderer.camera;
 	var friction = _camera.friction;
-	var angle = _camera.rotation[1]; // y rotation (look L/R)
-	// _camera position
+	var angle = _camera.rot[1]; // y rot (look L/R)
+	// _camera pos
 	if ( _camera.w > 0 ) {
-		_camera.position[2] += Math.cos( radians( angle ) ) * _camera.w;
-		_camera.position[0] -= Math.sin( radians( angle ) ) * _camera.w;
+		_camera.pos[2] += Math.cos( radians( angle ) ) * _camera.w;
+		_camera.pos[0] -= Math.sin( radians( angle ) ) * _camera.w;
 		if ( _camera.w < 1 ) {
 			_camera.w -= friction;
 		}
 	}
 	if ( _camera.s > 0 ) {
-		_camera.position[2] -= Math.cos( radians( angle ) ) * _camera.s;
-		_camera.position[0] += Math.sin( radians( angle ) ) * _camera.s;
+		_camera.pos[2] -= Math.cos( radians( angle ) ) * _camera.s;
+		_camera.pos[0] += Math.sin( radians( angle ) ) * _camera.s;
 		if ( _camera.s < 1 ) {
 			_camera.s -= friction;
 		}
 	}
 	if ( _camera.a > 0 ) {
-		_camera.position[2] -= Math.sin( radians( angle ) ) * _camera.a;
-		_camera.position[0] -= Math.cos( radians( angle ) ) * _camera.a;
+		_camera.pos[2] -= Math.sin( radians( angle ) ) * _camera.a;
+		_camera.pos[0] -= Math.cos( radians( angle ) ) * _camera.a;
 		if ( _camera.a < 1 ) {
 			_camera.a -= friction;
 		}
 	}
 	if ( _camera.d > 0 ) {
-		_camera.position[2] += Math.sin( radians( angle ) ) * _camera.d;
-		_camera.position[0] += Math.cos( radians( angle ) ) * _camera.d;
+		_camera.pos[2] += Math.sin( radians( angle ) ) * _camera.d;
+		_camera.pos[0] += Math.cos( radians( angle ) ) * _camera.d;
 		if ( _camera.d < 1 ) {
 			_camera.d -= friction;
 		}
 	}
-	// _camera rotation
+	// _camera rot
 	if ( _camera.u > 0 ) {
-		_camera.rotation[0] += _camera.u;
+		if ( _camera.rot[0] < 90 ) {
+			_camera.rot[0] += _camera.u;
+		}
 		if ( _camera.u < 1 ) {
 			_camera.u -= friction;
 		}
 	}
 	if ( _camera.o > 0 ) {
-		_camera.rotation[0] -= _camera.o;
+		if ( _camera.rot[0] >- 90 ) {
+			_camera.rot[0] -= _camera.o;
+		}
 		if ( _camera.o < 1 ) {
 			_camera.o -= friction;
 		}
 	}
 	if ( _camera.l > 0 ) {
-		_camera.rotation[1] += _camera.l;
+		_camera.rot[1] += _camera.l;
 		if ( _camera.l < 1 ) {
 			_camera.l -= friction;
 		}
 	}
 	if ( _camera.r > 0 ) {
-		_camera.rotation[1] -= _camera.r;
+		_camera.rot[1] -= _camera.r;
 		if ( _camera.r < 1 ) {
 			_camera.r -= friction;
 		}
 	}
 };
 
-function r_3( _scene, _renderer ) { // TRANSLATE_SCENE perform object and camera transforms
-	//var _scene = scene;
-	//var _renderer = renderer;
+function r_scene( _scene, _renderer ) { // TRANSLATE_SCENE perform object and camera transforms
 	for ( var i=0; i<_scene.objs.length; i++ ) {
 		var transform = _scene.objs[i].mesh.transform.slice();
-		_scene.objs[i].mesh.transform = rotate( transform, _scene.objs[i].mesh.rotation );
-		_scene.objs[i].mesh.transform = translate( transform, _scene.objs[i].mesh.position );
-		_scene.objs[i].mesh.transform = translate( transform, _renderer.camera.position );
-		_scene.objs[i].mesh.transform = rotate( transform, _renderer.camera.rotation );
+		_scene.objs[i].mesh.transform = rotate( transform, _scene.objs[i].mesh.rot );
+		_scene.objs[i].mesh.transform = translate( transform, _scene.objs[i].mesh.pos );
+		_scene.objs[i].mesh.transform = translate( transform, _renderer.camera.pos );
+		_scene.objs[i].mesh.transform = rotate( transform, _renderer.camera.rot );
 	}
 };
 
-function r_4( _scene, _renderer ) {// PROJECT2D convert 3D coordinates to 2D coordinates
-	//var _scene = scene;
-	//var _renderer = renderer;
+function r_project( _scene, _renderer ) {// PROJECT2D convert 3D coordinates to 2D coordinates
 	for ( var i=0; i<_scene.objs.length; i++ ) {
 		for ( var j=0; j<_scene.objs[i].mesh.transform.length; j++ ) {
 			if ( _scene.objs[i].mesh.transform[j][2] >= 0 ) { // z behind us
@@ -205,9 +237,7 @@ function r_4( _scene, _renderer ) {// PROJECT2D convert 3D coordinates to 2D coo
 	}
 };
 
-function r_5( _scene, _renderer ) { // Z_SORT sort objects by z-index and set face rendering options
-	//var _scene = scene;
-	//var _renderer = renderer;
+function r_zsort( _scene, _renderer ) { // Z_SORT sort objects by z-index and set face rendering options
 	_renderer.zSort = [];
 	for ( var i=0; i<_scene.objs.length; i++ ) {
 		for ( var j=0; j<_scene.objs[i].mesh.faces.length; j++ ) {
@@ -260,13 +290,15 @@ function r_5( _scene, _renderer ) { // Z_SORT sort objects by z-index and set fa
 	});
 };
 
-function r_6( _scene, _renderer ) { // DRAW draw to the canvas
-	//var _scene = scene;
-	//var _renderer = renderer;
+function r_draw( _scene, _renderer ) { // DRAW draw to the canvas
 	var ctx = _renderer.ctx;
 	ctx.clearRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // clear canvas
-	ctx.fillStyle="rgb("+_scene.bg[0]+","+_scene.bg[1]+","+_scene.bg[2]+")";
-	ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // fill background color
+	if ( _renderer.bg ) {
+		r_draw_bg( _renderer.bg, ctx, _renderer.camera );
+	} else {
+		ctx.fillStyle="rgb(142, 214, 255)";
+		ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // fill background color
+	}
 	for ( var i=0; i<_renderer.zSort.length; i++ ) {
 		if ( _renderer.zSort[i][5] ) { // if face is visible
 			_renderer.zSort[i][5] = backface_cull( _renderer.zSort[i] ); // backface cull
@@ -324,6 +356,10 @@ function r_6( _scene, _renderer ) { // DRAW draw to the canvas
 					ctx.strokeStyle="rgb("+r+","+g+","+b+")";
 					ctx.stroke();
 				}
+
+				if ( _renderer.zSort[i][6].textured ) {
+					r_texture( ctx, pts, _renderer );
+				}
 				ctx.restore();
 			}
 		}
@@ -331,9 +367,63 @@ function r_6( _scene, _renderer ) { // DRAW draw to the canvas
 	_renderer.zSort = [];
 };
 
-var Controller = function( scene, renderer ) {
-	var _scene = scene;
-	var _renderer = renderer;
+function r_texture( ctx, pts, _renderer ) {
+	var tris = [[0,1,3],[1,2,3]];
+	var uvs = [ [0, 640], [640, 640], [640, 0], [0, 0] ];
+	for (var t=0; t<tris.length; t++) {
+		ctx.save();
+		ctx.beginPath();
+		ctx.moveTo( pts[0][0], pts[0][1] );
+		ctx.lineTo( pts[1][0], pts[1][1] );
+		ctx.lineTo( pts[2][0], pts[2][1] );
+		ctx.lineTo( pts[3][0], pts[3][1] );
+		ctx.lineTo( pts[0][0], pts[0][1] );
+		ctx.closePath();
+		ctx.clip();
+	    var pp = tris[t],
+	        p1 = pp[0], p2 = pp[1], p3 = pp[2],
+	        x0 = pts[p1][0], x1 = pts[p2][0], x2 = pts[p3][0],
+	        y0 = pts[p1][1], y1 = pts[p2][1], y2 = pts[p3][1],
+	        u0 = uvs[p1][0], u1 = uvs[p2][0], u2 = uvs[p3][0],
+	        v0 = uvs[p1][1], v1 = uvs[p2][1], v2 = uvs[p3][1];
+	    // Cramer's rule
+	    var delta = u0*v1 + v0*u2 + u1*v2 - v1*u2 - v0*u1 - u0*v2,
+	        da = x0*v1 + v0*x2 + x1*v2 - v1*x2 - v0*x1 - x0*v2,
+	        db = u0*x1 + x0*u2 + u1*x2 - x1*u2 - x0*u1 - u0*x2,
+	        dc = u0*v1*x2 + v0*x1*u2 + x0*u1*v2 - x0*v1*u2 - v0*u1*x2 - u0*x1*v2,
+	        dd = y0*v1 + v0*y2 + y1*v2 - v1*y2 - v0*y1 - y0*v2,
+	        de = u0*y1 + y0*u2 + u1*y2 - y1*u2 - y0*u1 - u0*y2,
+	        df = u0*v1*y2 + v0*y1*u2 + y0*u1*v2 - y0*v1*u2 - v0*u1*y2 - u0*y1*v2;
+	    ctx.transform(
+	        da/delta, dd/delta,
+	        db/delta, de/delta,
+	        dc/delta, df/delta
+	    );
+	    ctx.drawImage( _renderer.texture, 0, 0 );
+		ctx.restore();
+	}
+};
+
+function r_draw_bg( bg, ctx, camera ) {
+	var bgctx = bg.ctx;
+	var grd = ctx.createLinearGradient( 0, -maxHeight, 0, maxHeight*2 );
+	var angle = camera.rot[0] + 90;
+	var horizon = angle/170;
+	bgctx.save();
+	bgctx.clearRect( 0, 0, maxWidth, maxHeight*2 );
+	grd.addColorStop( 0.2, "rgb(" + bg.top[0] + "," + bg.top[1] + "," + bg.top[2] + ")" )
+	grd.addColorStop( Math.max( Math.min( horizon, 0.8 ), 0.2 ), "rgb(" + bg.sky[0] + "," + bg.sky[1] + "," + bg.sky[2] + ")" );
+	grd.addColorStop( Math.max( Math.min( horizon+0.02, 0.8 ), 0.2 ), "rgb(" + bg.ground[0] + "," + bg.ground[1] + "," + bg.ground[2] + ")" );
+	grd.addColorStop( 0.8, "rgb(" + bg.btm[0] + "," + bg.btm[1] + "," + bg.btm[2] + ")" );
+	bgctx.fillStyle = grd;
+	bgctx.fillRect( 0, -maxHeight, maxWidth, maxHeight*2 );
+
+	ctx.drawImage( bg.can, 0, 0 );
+	ctx.restore();
+	bgctx.restore();
+}
+
+var Controller = function( _scene, _renderer ) {
 	this.init = function() {
 		var camera = _renderer.camera;
 		var speed = camera.speed;
