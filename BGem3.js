@@ -55,10 +55,10 @@ var PlaneMesh = function( options ) {
 	this.shineStren = 50;
 	this.vertices3D = [
 		[ 0, 0, 0 ], // anchor point
-		[ this.size+this.pos[0], -this.size+this.pos[1], 0 ],
-		[ -this.size+this.pos[0], -this.size+this.pos[1], 0 ],
-		[ -this.size+this.pos[0], this.size+this.pos[1], 0 ],
-		[ this.size+this.pos[0], this.size+this.pos[1], 0 ],
+		[ this.size, -this.size, 0 ],
+		[ -this.size, -this.size, 0 ],
+		[ -this.size, this.size, 0 ],
+		[ this.size, this.size, 0 ],
 	];
 	this.faces = [
 		[ 1, 2, 3, 4 ], // front
@@ -81,14 +81,14 @@ var CubeMesh = function( options ) {
 	this.shineStren = 50;
 	this.vertices3D = [
 		[ 0, 0, 0 ], // anchor point
-		[ this.size+this.pos[0], -this.size+this.pos[1], -this.size+this.pos[2] ],
-		[ -this.size+this.pos[0], -this.size+this.pos[1], -this.size+this.pos[2] ],
-		[ -this.size+this.pos[0], this.size+this.pos[1], -this.size+this.pos[2] ],
-		[ this.size+this.pos[0], this.size+this.pos[1], -this.size+this.pos[2] ],
-		[ this.size+this.pos[0], -this.size+this.pos[1], this.size+this.pos[2] ],
-		[ -this.size+this.pos[0], -this.size+this.pos[1], this.size+this.pos[2] ],
-		[ -this.size+this.pos[0], this.size+this.pos[1], this.size+this.pos[2] ],
-		[ this.size+this.pos[0], this.size+this.pos[1], this.size+this.pos[2] ]
+		[ this.size, -this.size, -this.size ],
+		[ -this.size, -this.size, -this.size ],
+		[ -this.size, this.size, -this.size ],
+		[ this.size, this.size, -this.size ],
+		[ this.size, -this.size, this.size ],
+		[ -this.size, -this.size, this.size ],
+		[ -this.size, this.size, this.size ],
+		[ this.size, this.size, this.size ]
 	];
 	this.faces = [
 		[ 1, 2, 3, 4 ], // front
