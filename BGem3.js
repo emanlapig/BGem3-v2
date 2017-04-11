@@ -62,6 +62,7 @@ var PlaneMesh = function( options ) {
 	];
 	this.faces = [
 		[ 1, 2, 3, 4 ], // front
+		[ 4, 3, 2, 1 ] // back
 	];
 };
 PlaneMesh.prototype = new Mesh();
@@ -398,12 +399,12 @@ function r_draw_bg( bg, ctx, camera ) {
 	var bgctx = bg.ctx;
 	var grd = ctx.createLinearGradient( 0, -maxHeight, 0, maxHeight*2 );
 	var angle = camera.rot[0] + 90;
-	var horizon = angle/170;
+	var horizon = angle/175;
 	bgctx.save();
 	bgctx.clearRect( 0, 0, maxWidth, maxHeight*2 );
 	grd.addColorStop( 0.2, "rgb(" + bg.top[0] + "," + bg.top[1] + "," + bg.top[2] + ")" )
-	grd.addColorStop( Math.max( Math.min( horizon, 0.8 ), 0.2 ), "rgb(" + bg.sky[0] + "," + bg.sky[1] + "," + bg.sky[2] + ")" );
-	grd.addColorStop( Math.max( Math.min( horizon+0.02, 0.8 ), 0.2 ), "rgb(" + bg.ground[0] + "," + bg.ground[1] + "," + bg.ground[2] + ")" );
+	grd.addColorStop( Math.max( Math.min( horizon-0.01, 0.8 ), 0.2 ), "rgb(" + bg.sky[0] + "," + bg.sky[1] + "," + bg.sky[2] + ")" );
+	grd.addColorStop( Math.max( Math.min( horizon+0.01, 0.8 ), 0.2 ), "rgb(" + bg.ground[0] + "," + bg.ground[1] + "," + bg.ground[2] + ")" );
 	grd.addColorStop( 0.8, "rgb(" + bg.btm[0] + "," + bg.btm[1] + "," + bg.btm[2] + ")" );
 	bgctx.fillStyle = grd;
 	bgctx.fillRect( 0, -maxHeight, maxWidth, maxHeight*2 );
