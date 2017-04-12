@@ -1,6 +1,7 @@
 <html>
 <head>
 	<title>BGem3 v2</title>
+	<script type="text/javascript" src="Assets.min.js"></script>
 	<script type="text/javascript" src="BGem3.min.js"></script>
 	<script type="text/javascript" src="Game.min.js"></script>
 
@@ -72,7 +73,8 @@
 							random(-spread,spread)+0.1, 
 							random(-20,-10)+0.1, 
 							random(-spread,spread)+0.1 
-						], 
+						],
+						rot: [ 0, 0, .5 ],
 						color:[ 102, 45, 145 ]
 					}) );
 				scene.objs.push( cube );
