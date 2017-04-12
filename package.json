@@ -1,0 +1,13 @@
+{
+  "name": "BGem3-v2",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emanlapig/BGem3-v2.git"
+  },
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-uglify": "^2.0.0",
+    "grunt-contrib-watch": "^1.0.0"
+  }
+}
