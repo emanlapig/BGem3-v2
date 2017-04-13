@@ -5,6 +5,12 @@ var Obj3D = function( mesh ) {
 	this.visible = true;
 };
 
+var ObjGroup = function( objs, options ) {
+	this.objs = objs;
+	this.rot = options.rot || [ 0, 0, 0 ];
+	this.pos = options.pos || [ 0, 0, 0 ];
+};
+
 var Mesh = function() {
 	this.rot = [ 0, 0, 0 ];
 	this.vertices3D = [];

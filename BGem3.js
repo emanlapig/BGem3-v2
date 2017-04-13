@@ -1,6 +1,7 @@
 // BGem3.js
 var Scene = function() {
 	this.objs = [];
+	this.groups = [];
 	this.cams = [];
 	this.fog = true;
 	this.fogColor = [ 142, 214, 255 ];
@@ -124,6 +125,16 @@ var Renderer = function( scene, options ) {
 				var transform = _scene.objs[i].mesh.transform.slice();
 				_scene.objs[i].mesh.transform = rotate( transform, _scene.objs[i].mesh.rot );
 				_scene.objs[i].mesh.transform = translate( transform, _scene.objs[i].mesh.pos );
+			}
+			for ( var i=0; i<_scene.groups.length; i++ ) {
+				for ( var j=0; j<_scene.groups[i].objs.length; j++ ) {
+					var transform = _scene.groups[i].objs[j].mesh.transform.slice();
+					_scene.groups[i].objs[j].mesh.transform = rotate( transform, _scene.groups[i].rot );
+					_scene.groups[i].objs[j].mesh.transform = translate( transform, _scene.groups[i].pos );
+				}
+			}
+			for ( var i=0; i<_scene.objs.length; i++ ) {
+				var transform = _scene.objs[i].mesh.transform.slice();
 				_scene.objs[i].mesh.transform = translate( transform, _renderer.camera.pos );
 				_scene.objs[i].mesh.transform = rotate( transform, _renderer.camera.rot );
 			}

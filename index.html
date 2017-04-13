@@ -44,6 +44,7 @@
 				speed: 1, // player velocity
 				fr: 0.1  // player friction
 			} );
+			scene.cams.push( camera );
 
 			// ADD OBJECTS TO STAGE
 			/*var plane = new Obj3D( new PlaneMesh({ 
@@ -63,7 +64,7 @@
 				textured: false
 			}) );
 
-			scene.objs.push( cube );*/
+			scene.objs.push( cube );
 
 			for ( var i=0; i<100; i++ ) {
 				var spread = 100;
@@ -78,8 +79,47 @@
 						color:[ 102, 45, 145 ]
 					}) );
 				scene.objs.push( cube );
-			}
-			scene.cams.push( camera );
+			}*/
+
+			var cube1 = new Obj3D( new CubeMesh({ 
+				size: 5, 
+				pos: [ 0, 0, 0 ],
+				rot: [ 0, 0, 0 ],
+				color: [ 102, 45, 145 ]
+			}) );
+			scene.objs.push( cube1 );
+
+			var cube2 = new Obj3D( new CubeMesh({ 
+				size: 5, 
+				pos: [ -10, 0, 0 ],
+				rot: [ 0, 0, 0 ],
+				color: [ 102, 45, 145 ]
+			}) );
+			scene.objs.push( cube2 );
+				
+			var cube3 = new Obj3D( new CubeMesh({ 
+				size: 5, 
+				pos: [ 10, 0, 0 ],
+				rot: [ 0, 0, 0 ],
+				color: [ 102, 45, 145 ]
+			}) );
+			scene.objs.push( cube3 );
+
+			var cube4 = new Obj3D( new CubeMesh({ 
+				size: 5, 
+				pos: [ 0, 20, 0 ],
+				rot: [ 0, 0, 0 ],
+				color: [ 102, 45, 145 ]
+			}) );
+			scene.objs.push( cube4 );
+
+			var objarr = [ cube1, cube2, cube3 ],
+				options = {
+					pos: [ 15, 0, 0 ],
+					rot: [ 0, 0, 0 ]
+				},
+				group = new ObjGroup( objarr, options );
+			scene.groups.push( group );
 
 			// DEFINE CANVAS
 			var canvas = document.getElementById("viewport"),
