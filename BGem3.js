@@ -5,7 +5,7 @@ var Scene = function() {
 	this.cams = [];
 	this.fog = true;
 	this.fogColor = [ 142, 214, 255 ];
-	this.fogDist = 600; // distance at which objects disappear
+	this.fogDist = 500; // distance at which objects disappear
 	this.clipDist = 50; // buffer distance for clipping objects behind us
 	this.floor = -20; // y-coord of floor
 };
@@ -96,13 +96,13 @@ var Renderer = function( scene, options ) {
 				}
 			}
 			// camera rot
-			if ( camera.u > 0 ) {
+			if ( camera.u > 0 && camera.rot[0] < 90 ) {
 				camera.rot[0] += camera.u;
 				if ( camera.u < 1 ) {
 					camera.u -= friction;
 				}
 			}
-			if ( camera.o > 0 ) {
+			if ( camera.o > 0 && camera.rot[0] > -90) {
 				camera.rot[0] -= camera.o;
 				if ( camera.o < 1 ) {
 					camera.o -= friction;
@@ -261,6 +261,9 @@ var Renderer = function( scene, options ) {
 								b = Math.floor( b - ( Bdiff*fogRatio ) );
 							}
 						}
+						//r = Math.max( Math.min( r, 255 ), 0 );
+						//g = Math.max( Math.min( g, 255 ), 0 );
+						//b = Math.max( Math.min( b, 255 ), 0 );
 						// if fill is enabled (if false shadows will also not be drawn)
 						if ( face[6].fill ) { 
 							ctx.fillStyle="rgb("+r+","+g+","+b+")";
@@ -341,6 +344,8 @@ function r_draw_bg( bg, ctx, camera ) {
 };
 
 var Controller = function( renderer ) {
+	this.touchL = [ 0, 0 ];
+	this.touchR = [ 0, 0 ];
 	this.init = function() {
 		var camera = renderer.camera;
 		var speed = camera.speed;
@@ -400,6 +405,48 @@ var Controller = function( renderer ) {
 					camera.r = 0;
 					break;
 			}
+		});
+		document.getElementById( "touch-l" ).addEventListener( "touchstart", function( e ) {
+			this.touchL = [ e.targetTouches[0].pageX, e.targetTouches[0].pageY ];
+		});
+		document.getElementById( "touch-r" ).addEventListener( "touchstart", function( e ) {
+			this.touchR = [ e.targetTouches[0].pageX, e.targetTouches[0].pageY ];
+		});
+		document.getElementById( "touch-l" ).addEventListener( "touchmove", function( e ) {
+			if ( ( this.touchL[1] - e.targetTouches[0].pageY ) > 0 ) {
+				camera.w = speed * Math.min( ( this.touchL[1] - e.targetTouches[0].pageY )/10, 1 );
+			} else {
+				camera.s = -speed * Math.max( ( this.touchL[1] - e.targetTouches[0].pageY )/10, -1);
+			}
+			if ( ( this.touchL[0] - e.targetTouches[0].pageX ) > 0 ) {
+				camera.a = speed * Math.min( ( this.touchL[0] - e.targetTouches[0].pageX )/10, 1 );
+			} else {
+				camera.d = -speed * Math.max( ( this.touchL[0] - e.targetTouches[0].pageX )/10, -1);
+			}
+		});
+		document.getElementById( "touch-r" ).addEventListener( "touchmove", function( e ) {
+			if ( ( this.touchR[1] - e.targetTouches[0].pageY ) > 0 ) {
+				camera.u = speed * Math.min( ( this.touchR[1] - e.targetTouches[0].pageY )/10, 1 );
+			} else {
+				camera.o = -speed*3 * Math.max( ( this.touchR[1] - e.targetTouches[0].pageY )/10, -1 );
+			}
+			if ( ( this.touchR[0] - e.targetTouches[0].pageX ) > 0 ) {
+				camera.l = speed * Math.min( ( this.touchR[0] - e.targetTouches[0].pageX )/10, 1 );
+			} else {
+				camera.r = -speed*3 * Math.max( ( this.touchR[0] - e.targetTouches[0].pageX )/10, -1 );
+			}
+		});
+		document.getElementById( "touch-l" ).addEventListener( "touchend", function( e ) {
+			camera.w = 0;
+			camera.s = 0;
+			camera.a = 0;
+			camera.d = 0;
+		});
+		document.getElementById( "touch-r" ).addEventListener( "touchend", function( e ) {
+			camera.u = 0;
+			camera.o = 0;
+			camera.l = 0;
+			camera.r = 0;
 		});
 	}
 };
@@ -514,7 +561,7 @@ function backface_cull( face ) {
 };
 
 function get_normal( face ) {
-	var light = [ 100, 200, 50 ];
+	var light = [ 100, 100, 50 ];
 	var p1 = face[0],
 		p2 = face[1],
 		p3 = face[2];

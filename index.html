@@ -7,16 +7,32 @@
 
 	<style type="text/css">
 		body {
-			overflow:hidden;
-			background-color:#fff;
-			margin:0;
+			overflow: hidden;
+			background-color: #fff;
+			margin: 0;
 		}
 		#viewport {
-			display:block;
-			position:fixed;
-			width:100%;
-			height:100%;
-			z-index:1;
+			display: block;
+			position: fixed;
+			width: 100%;
+			height: 100%;
+			z-index: 1;
+		}
+		#touch-l, #touch-r {
+			display: block;
+			position: absolute;
+			width: 50%;
+			height: 100%;
+			margin: 0px;
+			top: 0px;
+			z-index: 20;
+			background: transparent;
+		}
+		#touch-l {
+			left: 0px;
+		}
+		#touch-r {
+			right: 0px;
 		}
 	</style>
 </head>
@@ -27,6 +43,9 @@
 
 	<canvas id="bg" style="visiblity:hidden">
 	</canvas>
+
+	<div id="touch-l"></div>
+	<div id="touch-r"></div>
 
 	<script type="text/javascript">
 		var maxWidth = window.innerWidth,
