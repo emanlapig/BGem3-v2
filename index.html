@@ -38,88 +38,13 @@
 
 			// DEFINE CAMERA
 			var camera = new Camera( { 
-				pos: [ 0, 0, -200 ], 
+				pos: [ 0, 0, -50 ], 
 				rot: [ 0, 10, 0 ], 
 				fl: 800, // focal length
 				speed: 1, // player velocity
 				fr: 0.1  // player friction
 			} );
 			scene.cams.push( camera );
-
-			// ADD OBJECTS TO STAGE
-			/*var plane = new Obj3D( new PlaneMesh({ 
-				size: 5, 
-				pos: [ 0, 10, 0 ],
-				rot: [ 0, 180, 0],
-				color: [ 102, 45, 145 ],
-				textured: false
-			}) );
-
-			scene.objs.push( plane );
-			var cube = new Obj3D( new CubeMesh({ 
-				size: 5, 
-				pos: [ 0, 10, 0 ],
-				rot: [ 0, 180, 0 ],
-				color: [ 102, 45, 145 ],
-				textured: false
-			}) );
-
-			scene.objs.push( cube );
-
-			for ( var i=0; i<100; i++ ) {
-				var spread = 100;
-				var cube = new Obj3D( new CubeMesh({
-						size:3, 
-						pos:[ 
-							random(-spread,spread)+0.1, 
-							random(-20,-10)+0.1, 
-							random(-spread,spread)+0.1 
-						],
-						rot: [ 0, 0, .5 ],
-						color:[ 102, 45, 145 ]
-					}) );
-				scene.objs.push( cube );
-			}*/
-
-			var cube1 = new Obj3D( new CubeMesh({ 
-				size: 5, 
-				pos: [ 0, 0, 0 ],
-				rot: [ 0, 0, 0 ],
-				color: [ 102, 45, 145 ]
-			}) );
-			scene.objs.push( cube1 );
-
-			var cube2 = new Obj3D( new CubeMesh({ 
-				size: 5, 
-				pos: [ -10, 0, 0 ],
-				rot: [ 0, 0, 0 ],
-				color: [ 102, 45, 145 ]
-			}) );
-			scene.objs.push( cube2 );
-				
-			var cube3 = new Obj3D( new CubeMesh({ 
-				size: 5, 
-				pos: [ 10, 0, 0 ],
-				rot: [ 0, 0, 0 ],
-				color: [ 102, 45, 145 ]
-			}) );
-			scene.objs.push( cube3 );
-
-			var cube4 = new Obj3D( new CubeMesh({ 
-				size: 5, 
-				pos: [ 0, 20, 0 ],
-				rot: [ 0, 0, 0 ],
-				color: [ 102, 45, 145 ]
-			}) );
-			scene.objs.push( cube4 );
-
-			var objarr = [ cube1, cube2, cube3 ],
-				options = {
-					pos: [ 15, 0, 0 ],
-					rot: [ 0, 0, 0 ]
-				},
-				group = new ObjGroup( objarr, options );
-			scene.groups.push( group );
 
 			// DEFINE CANVAS
 			var canvas = document.getElementById("viewport"),
@@ -164,6 +89,7 @@
 
 			// DEFINE GAME
 			var game = new Game( scene );
+			game.init();
 
 			// INITIALIZE ANIMATION
 			if ( animationFrame ) {
@@ -190,7 +116,6 @@
 			play = false;
 		}
 		window.onload = init;
-
 	</script>
 </body>
 </html>

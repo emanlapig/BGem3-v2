@@ -7,6 +7,7 @@ var Scene = function() {
 	this.fogColor = [ 142, 214, 255 ];
 	this.fogDist = 600; // distance at which objects disappear
 	this.clipDist = 50; // buffer distance for clipping objects behind us
+	this.floor = -20; // y-coord of floor
 };
 
 var Camera = function( options ) {
@@ -213,14 +214,15 @@ var Renderer = function( scene, options ) {
 				ctx.fillRect( 0, 0, _renderer.maxWidth, _renderer.maxHeight ); // fill background color
 			}
 			for ( var i=0; i<_renderer.zSort.length; i++ ) {
-				if ( _renderer.zSort[i][5] ) { // if face is visible
-					_renderer.zSort[i][5] = backface_cull( _renderer.zSort[i] ); // backface cull
-					if ( _renderer.zSort[i][5] ) { // if face is visible after backface cull
+				var face = _renderer.zSort[i];
+				if ( face[5] ) { // if face is visible
+					face[5] = backface_cull( face ); // backface cull
+					if ( face[5] ) { // if face is visible after backface cull
 						var pts = [
-							_renderer.zSort[i][0],
-							_renderer.zSort[i][1],
-							_renderer.zSort[i][2],
-							_renderer.zSort[i][3]
+							face[0],
+							face[1],
+							face[2],
+							face[3]
 						];
 						ctx.beginPath();
 						ctx.moveTo( pts[0][0], pts[0][1] );
@@ -229,15 +231,15 @@ var Renderer = function( scene, options ) {
 						ctx.lineTo( pts[3][0], pts[3][1] );
 						ctx.lineTo( pts[0][0], pts[0][1] );
 						ctx.closePath();
-						var color = _renderer.zSort[i][6].color,
+						var color = face[6].color,
 							r = color[0],
 							g = color[1],
 							b = color[2];
 						// if shadows are enabled
-						if ( _renderer.zSort[i][6].shadow ) { 
-							var normal = _renderer.zSort[i][6].normal;
-							var shineWidth = _renderer.zSort[i][6].shineWidth,
-								shineStren = _renderer.zSort[i][6].shineStren,
+						if ( face[6].shadow ) { 
+							var normal = face[6].normal;
+							var shineWidth = face[6].shineWidth,
+								shineStren = face[6].shineStren,
 								shade = 1 - ( normal/Math.PI ),
 								shine = 1 - ( normal/Math.PI ) * shineWidth;
 							r = Math.floor( color[0]*shade ) + Math.floor( color[0]*shine + shineStren*shine ),
@@ -245,7 +247,7 @@ var Renderer = function( scene, options ) {
 							b = Math.floor( color[2]*shade ) + Math.floor( color[2]*shine + shineStren*shine );
 							// if fog is enabled
 							if ( _scene.fog ) { 
-								var dist = -_renderer.zSort[i][4] / 4; // object distance from cam
+								var dist = -face[4] / 4; // object distance from cam
 								var fogRatio = dist / _scene.fogDist;
 								if (fogRatio>1) {
 									fogRatio=1;
@@ -260,17 +262,17 @@ var Renderer = function( scene, options ) {
 							}
 						}
 						// if fill is enabled (if false shadows will also not be drawn)
-						if ( _renderer.zSort[i][6].fill ) { 
+						if ( face[6].fill ) { 
 							ctx.fillStyle="rgb("+r+","+g+","+b+")";
 							ctx.fill();
 						}
 						// if stroke is enabled (currently uses shaded fill color)
-						if ( _renderer.zSort[i][6].stroke ) { 
+						if ( face[6].stroke ) { 
 							ctx.strokeStyle="rgb("+r+","+g+","+b+")";
 							ctx.stroke();
 						}
 
-						if ( _renderer.zSort[i][6].textured ) {
+						if ( face[6].textured ) {
 							r_texture( ctx, pts, _renderer );
 						}
 						ctx.restore();
@@ -358,16 +360,16 @@ var Controller = function( renderer ) {
 					camera.d = speed;
 					break;
 				case 38: // up
-					camera.u = speed;
+					camera.u = speed * 2;
 					break;
 				case 40: // down
-					camera.o = speed;
+					camera.o = speed * 2;
 					break;
 				case 37: // left
-					camera.l = speed;
+					camera.l = speed * 2;
 					break;
 				case 39: // right
-					camera.r = speed;
+					camera.r = speed * 2;
 					break;
 			}
 		});
@@ -488,7 +490,7 @@ function get_dist( p1, p2 ) {
 
 function random( a, b ) {
 	var c = b - a;
-	return Math.floor( Math.random()*c+a );
+	return Math.floor( Math.random()*c+a ) + 1;
 };
 
 function round2( num ) {
@@ -534,3 +536,5 @@ function get_normal( face ) {
 	var angle = Math.acos( (ax*bx+ay*by+az*bz) / Math.sqrt((ax*ax+ay*ay+az*az)*(bx*bx+by*by+bz*bz)) );
 	return angle;
 };
+
+// the end.
